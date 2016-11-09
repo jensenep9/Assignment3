@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Assignment 3 - COS 452</title>
+    <style>
+        body{
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas{
+            background:blue;
+        }
+    </style>
+</head>
+<body>
+    <i>Controls: WASD - move, Arrow keys: look around</i>
+    <button type="button" onclick="bOrthographic=true">Orthographic Projection</button>
+    <button type="button" onclick="bOrthographic = false">Perspective Projection</button>
+    <canvas id="gl-canvas">
+        Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    <script src="../Common/webgl-utils.js"></script>
+    <script src="three.js"></script>
+    <script src="../Common/three.js-master/examples/js/loaders/OBJLoader.js"></script>
+    <script >
+        var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('gl-canvas')});
+        renderer.setClearColor(0x00ff00);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth,window.innerHeight);
+
+        var camera = new THREE.PerspectiveCamera(35, window.innerWidth/window.innerHeight,0.1,3000);
+        var camOrtho = new THREE.OrthographicCamera(window.innerWidth / - 2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2,0.1,3000)
+        var bOrthographic = false;
+        camera.position.y= 100;
+        camera.position.z= -100;
+
+        var scene = new THREE.Scene();
+
+        var light1 = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(light1);
+
+        var light2 = new THREE.PointLight(0xffffff,0.5);
+        scene.add(light2);
+
+        var cubeGeometry = new THREE.CubeGeometry(100,100,100);
+        var cubeMaterial = new THREE.MeshNormalMaterial();
+        var cubeMesh = new THREE.Mesh(cubeGeometry,cubeMaterial);
+        cubeMesh.position.set(0,0,-1000);
+        scene.add(cubeMesh);
+
+        var wallGeometry = new THREE.CubeGeometry(2000,2000,2000);
+        var wallMaterial = new THREE.MeshNormalMaterial({side: THREE.BackSide});
+        var wallMesh = new THREE.Mesh(wallGeometry,wallMaterial);
+        wallMesh.position.set(0,0,-1000);
+        scene.add(wallMesh);
+
+        var floorGeometry = new THREE.PlaneGeometry(10000,10000,100,100);
+        var floorMaterial = new THREE.MeshLambertMaterial({color: 0x0000ff});
+        var floorMesh = new THREE.Mesh(floorGeometry,floorMaterial);
+        floorMesh.rotation.x = -90 * Math.PI / 180
+        floorMesh.position.y = -100;
+        scene.add(floorMesh);
+
+        var manager = new THREE.LoadingManager();
+        manager.onProgress = function ( item, loaded, total ) {
+            console.log( item, loaded, total );
+        };
+        var texture = new THREE.Texture();
+        var onProgress = function ( xhr ) {
+            if ( xhr.lengthComputable ) {
+                var percentComplete = xhr.loaded / xhr.total * 100;
+                console.log( Math.round(percentComplete, 2) + '% downloaded' );
+            }
+        };
+        var onError = function ( xhr ) {
+        };
+        var loader = new THREE.ImageLoader( manager );
+        loader.load( '../Common/three.js-master/examples/textures/UV_Grid_Sm.jpg', function ( image ) {
+            texture.image = image;
+            texture.needsUpdate = true;
+        } );
+        // model
+        var loader = new THREE.OBJLoader( manager );
+        loader.load( '../Common/three.js-master/examples/obj/male02/male02.obj', function ( object ) {
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    //child.material.map = texture;
+                    child.material = new THREE.MeshStandardMaterial({wireframe:true,emissive:0x00fff0});
+                }
+            } );
+            object.position.y = - 95;
+            object.position.z = -500;
+            scene.add( object );
+        }, onProgress, onError );
+
+        window.onkeydown = function(event)
+        {
+            switch(event.keyCode) {
+                case 37://Left arrow, look left
+                    //camera.rotation.y += 0.1 * Math.cos(camera.rotation.x);
+                    //camera.rotation.y += 0.1 * Math.sin(camera.rotation.x);
+                    var temp = camera.rotation.x;
+                    camera.rotateX(-temp);
+                    camera.rotateY(0.05);
+                    camera.rotateX(temp);
+                    break;
+                case 38://Up arrow, look up
+                    camera.rotateX(0.05);
+                    break;
+                case 39://Right arrow, look right
+                    var temp = camera.rotation.x;
+                    camera.rotateX(-temp);
+                    camera.rotateY(-0.05);
+                    camera.rotateX(temp);
+                    break;
+                case 40: //Down arrow, look down
+                    camera.rotateX(-0.05);
+                    break;
+                case 87: //W key
+                    camera.position.z-=10;
+                    break;
+                case 65: //A key
+                    camera.position.x-=10;
+                    break;
+                case 83: //S key
+                    camera.position.z+=10;
+                    break;
+                case 68: //D key
+                    camera.position.x+=10;
+                    break;
+                default:
+                    console.log(event.keyCode);
+                    break;
+            }
+        };
+        render();
+
+        var delta = 0;
+        function render(){
+            delta += 0.1;
+            cubeGeometry.vertices[0].x = Math.sin(delta) * 50;
+            cubeGeometry.vertices[1].z = Math.sin(delta) * 50;
+            cubeGeometry.vertices[5].y = Math.cos(delta) * 50;
+            cubeGeometry.verticesNeedUpdate = true;
+            cubeMesh.rotation.y = Math.cos(delta);
+            if(bOrthographic==true){
+                camOrtho.position.x=camera.position.x;
+                camOrtho.position.y=camera.position.y+100;
+                camOrtho.position.z=camera.position.z;
+                camOrtho.rotation.x=camera.rotation.x;
+                camOrtho.rotation.y=camera.rotation.y;
+                camOrtho.rotation.z=camera.rotation.z;
+                //camOrtho.position.x=0;
+                //camOrtho.position.y=100;
+                //camOrtho.position.z=-100;
+
+                renderer.render(scene,camOrtho);
+            }else{
+                renderer.render(scene,camera);
+            }
+            requestAnimationFrame(render);
+        }
+    </script>
+</body>
+</html>
